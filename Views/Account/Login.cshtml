@@ -1,0 +1,24 @@
+@{
+    ViewData["Title"] = "Вход";
+}
+
+<link rel="stylesheet" href="/css/site.css" />
+
+<h2>Вход</h2>
+
+<form method="post" action="/Account/Login">
+    <div>
+        <label>Имя пользователя:</label>
+        <input type="text" name="username" />
+    </div>
+    <div>
+        <label>Пароль:</label>
+        <input type="password" name="password" />
+    </div>
+    <button type="submit">Войти</button>
+</form>
+
+@if (ViewBag.Error != null)
+{
+    <p style="color: red;">@ViewBag.Error</p>
+}
