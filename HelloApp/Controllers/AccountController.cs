@@ -2,31 +2,43 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using HelloApp.Data;
+using HelloApp.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace HelloApp.Controllers
 {
     public class AccountController : Controller
     {
+        private readonly ApplicationDbContext _context;
+
+        public AccountController(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
         public IActionResult Login()
         {
             return View();
         }
 
         [HttpPost]
-        public IActionResult Login(string username, string password)
+        public async Task<IActionResult> Login(string username, string password)
         {
-            // Пример проверки учетных данных (замените на свою логику)
-            if (username == "admin" && password == "password")
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+
+            if (user != null && BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
             {
                 var claims = new List<Claim>
                 {
-                    new Claim(ClaimTypes.Name, username)
+                    new Claim(ClaimTypes.Name, user.Username),
+                    new Claim(ClaimTypes.Role, user.Role)
                 };
 
                 var identity = new ClaimsIdentity(claims, "CookieAuth");
                 var principal = new ClaimsPrincipal(identity);
 
-                HttpContext.SignInAsync("CookieAuth", principal);
+                await HttpContext.SignInAsync("CookieAuth", principal);
 
                 return RedirectToAction("Index", "Home");
             }

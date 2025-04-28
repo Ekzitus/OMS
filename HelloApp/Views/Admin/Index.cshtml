@@ -1,0 +1,23 @@
+@model IEnumerable<HelloApp.Models.User>
+
+<h1>Список пользователей</h1>
+
+<table>
+    <thead>
+        <tr>
+            <th>Id</th>
+            <th>Имя пользователя</th>
+            <th>Роль</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var user in Model)
+        {
+            <tr>
+                <td>@user.Id</td>
+                <td>@user.Username</td>
+                <td>@user.Role</td>
+            </tr>
+        }
+    </tbody>
+</table>
