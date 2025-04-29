@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using HelloApp.Data;
 using HelloApp.Models;
+using BCrypt.Net; // Для хэширования паролей
 using Microsoft.EntityFrameworkCore;
 
 namespace HelloApp.Controllers
@@ -43,13 +44,48 @@ namespace HelloApp.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
-            ViewBag.Error = "Неверное имя пользователя или пароль";
+            ViewData["Error"] = "Неверное имя пользователя или пароль";
             return View();
         }
 
         public IActionResult Logout()
         {
             HttpContext.SignOutAsync("CookieAuth");
+            return RedirectToAction("Login");
+        }
+
+        public IActionResult Register()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Register(string username, string password, string role = "User")
+        {
+            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
+            {
+                ViewData["Error"] = "Имя пользователя и пароль обязательны.";
+                return View();
+            }
+
+            // Проверяем, существует ли пользователь с таким именем
+            if (await _context.Users.AnyAsync(u => u.Username == username))
+            {
+                ViewData["Error"] = "Пользователь с таким именем уже существует.";
+                return View();
+            }
+
+            // Создаем нового пользователя
+            var user = new User
+            {
+                Username = username,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
+                Role = role
+            };
+
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+
             return RedirectToAction("Login");
         }
     }

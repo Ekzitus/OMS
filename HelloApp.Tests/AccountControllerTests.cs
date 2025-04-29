@@ -1,7 +1,11 @@
 using HelloApp.Controllers;
+using HelloApp.Data;
+using HelloApp.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Routing;
+using Microsoft.EntityFrameworkCore;
 using Xunit;
 using Moq;
 
@@ -13,7 +17,11 @@ public class AccountControllerTests
     public void AccountController_Login_ReturnsViewResult()
     {
         // Arrange
-        var controller = new AccountController();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase(databaseName: "TestDatabase")
+            .Options;
+        using var context = new ApplicationDbContext(options);
+        var controller = new AccountController(context);
 
         // Act
         var result = controller.Login();
@@ -23,19 +31,35 @@ public class AccountControllerTests
     }
 
     [Fact]
-    public void AccountController_Login_ValidCredentials_RedirectsToHomeIndex()
+    public async Task AccountController_Login_ValidCredentials_RedirectsToHomeIndex()
     {
         // Arrange
-        var controller = new AccountController();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase(databaseName: "TestDatabase")
+            .Options;
+        using var context = new ApplicationDbContext(options);
+        context.Users.Add(new User { Username = "admin", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password"), Role = "Admin" });
+        context.SaveChanges();
+
+        var controller = new AccountController(context);
 
         // Настраиваем поддельный HttpContext с сервисами
         var httpContext = new DefaultHttpContext();
         var authenticationServiceMock = new Mock<IAuthenticationService>();
         var serviceProviderMock = new Mock<IServiceProvider>();
+        var urlHelperFactoryMock = new Mock<IUrlHelperFactory>();
+        var urlHelperMock = new Mock<IUrlHelper>();
+
+        urlHelperFactoryMock
+            .Setup(factory => factory.GetUrlHelper(It.IsAny<ActionContext>()))
+            .Returns(urlHelperMock.Object);
 
         serviceProviderMock
             .Setup(sp => sp.GetService(typeof(IAuthenticationService)))
             .Returns(authenticationServiceMock.Object);
+        serviceProviderMock
+            .Setup(sp => sp.GetService(typeof(IUrlHelperFactory)))
+            .Returns(urlHelperFactoryMock.Object);
 
         httpContext.RequestServices = serviceProviderMock.Object;
         controller.ControllerContext = new ControllerContext
@@ -43,12 +67,8 @@ public class AccountControllerTests
             HttpContext = httpContext
         };
 
-        // Настраиваем поддельный IUrlHelper
-        var urlHelperMock = new Mock<IUrlHelper>();
-        controller.Url = urlHelperMock.Object;
-
         // Act
-        var result = controller.Login("admin", "password");
+        var result = await controller.Login("admin", "password");
 
         // Assert
         var redirectResult = Assert.IsType<RedirectToActionResult>(result);
@@ -57,43 +77,53 @@ public class AccountControllerTests
     }
 
     [Fact]
-    public void AccountController_Login_InvalidCredentials_ReturnsViewWithError()
+    public async Task AccountController_Login_InvalidCredentials_ReturnsViewWithError()
     {
         // Arrange
-        var controller = new AccountController();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase(databaseName: "TestDatabase")
+            .Options;
+        using var context = new ApplicationDbContext(options);
+        context.Users.Add(new User { Username = "admin", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password"), Role = "Admin" });
+        context.SaveChanges();
+
+        var controller = new AccountController(context);
 
         // Act
-        var result = controller.Login("wrongUser", "wrongPassword") as ViewResult;
+        var result = await controller.Login("wrongUser", "wrongPassword") as ViewResult;
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("Неверное имя пользователя или пароль", result?.ViewData["Error"]);
+        Assert.Equal("Неверное имя пользователя или пароль", result?.ViewData["Error"] as string);
     }
 
     [Fact]
     public void AccountController_Logout_RedirectsToLogin()
     {
         // Arrange
-        var controller = new AccountController();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase(databaseName: "TestDatabase")
+            .Options;
+        using var context = new ApplicationDbContext(options);
+        var controller = new AccountController(context);
 
-        // Настраиваем поддельный HttpContext с сервисами
         var httpContext = new DefaultHttpContext();
         var authenticationServiceMock = new Mock<IAuthenticationService>();
         var serviceProviderMock = new Mock<IServiceProvider>();
+        var urlHelperFactoryMock = new Mock<IUrlHelperFactory>();
 
         serviceProviderMock
             .Setup(sp => sp.GetService(typeof(IAuthenticationService)))
             .Returns(authenticationServiceMock.Object);
+        serviceProviderMock
+            .Setup(sp => sp.GetService(typeof(IUrlHelperFactory)))
+            .Returns(urlHelperFactoryMock.Object);
 
         httpContext.RequestServices = serviceProviderMock.Object;
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = httpContext
         };
-
-        // Настраиваем поддельный IUrlHelper
-        var urlHelperMock = new Mock<IUrlHelper>();
-        controller.Url = urlHelperMock.Object;
 
         // Act
         var result = controller.Logout();

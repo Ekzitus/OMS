@@ -1,0 +1,43 @@
+@{
+    ViewData["Title"] = "Регистрация";
+}
+
+<link rel="stylesheet" href="/css/site.css" />
+
+<h2>Регистрация</h2>
+
+<form method="post" action="/Account/Register" onsubmit="return validateForm()">
+    <div>
+        <label>Имя пользователя:</label>
+        <input type="text" name="username" required />
+    </div>
+    <div>
+        <label>Пароль:</label>
+        <input type="password" name="password" required />
+    </div>
+    <button type="submit">Зарегистрироваться</button>
+</form>
+
+@if (ViewBag.Error != null)
+{
+    <p style="color: red;">@ViewBag.Error</p>
+}
+
+<script>
+    function validateForm() {
+        const username = document.getElementById("username").value.trim();
+        const password = document.getElementById("password").value.trim();
+
+        if (!username) {
+            alert("Введите имя пользователя.");
+            return false;
+        }
+
+        if (!password) {
+            alert("Введите пароль.");
+            return false;
+        }
+
+        return true;
+    }
+</script>
