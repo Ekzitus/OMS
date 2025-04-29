@@ -38,12 +38,13 @@ HelloApp/
 ├── appsettings.json   # Настройки
 ├── Program.cs         # Точка входа
 └── README.md          # Этот файл
-```
+
 
 HelloApp.Tests/
 ├── AccountControllerTests.cs  # Тесты для AccountController
 ├── HomeControllerTests.cs     # Тесты для HomeController
 └── HelloApp.Tests.csproj      # Файл проекта тестов
+```
 
 ## 🚀 Как запустить
 
